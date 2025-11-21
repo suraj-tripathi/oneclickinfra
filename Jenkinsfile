@@ -12,7 +12,7 @@ pipeline {
         stage('Checkout Repo') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/abhinav450718/redis-ha-infra3.o.git'
+                    url: 'https://github.com/AdityaRajSingh18v/oneclickinfra2'
             }
         }
 
