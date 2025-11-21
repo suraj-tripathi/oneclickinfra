@@ -12,7 +12,7 @@ pipeline {
         stage('Checkout Repo') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/AdityaRajSingh18v/oneclickinfra2'
+                    url: 'https://github.com/AdityaRajSingh18v/oneclickinfra2.git'
             }
         }
 
@@ -21,7 +21,7 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'aws-creds',
+                        credentialsId: 'jenkinsdemo1',
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
