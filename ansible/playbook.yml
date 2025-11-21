@@ -1,0 +1,10 @@
+---
+- hosts: redis_master
+  become: yes
+  roles:
+    - geerlingguy.redis
+
+- hosts: redis_replica
+  become: yes
+  roles:
+    - geerlingguy.redis
