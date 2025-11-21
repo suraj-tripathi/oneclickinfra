@@ -1,0 +1,113 @@
+pipeline {
+
+    agent any
+
+    environment {
+        AWS_REGION = "eu-west-2"
+    }
+
+    stages {
+
+        /* ------------------ CHECKOUT ------------------ */
+        stage('Checkout Repo') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/abhinav450718/redis-ha-infra3.o.git'
+            }
+        }
+
+        /* ------------------ TERRAFORM ------------------ */
+        stage('Terraform Apply') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-creds',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        cd terraform
+                        terraform init
+                        terraform apply -auto-approve
+                    '''
+                }
+            }
+        }
+
+        /* ------------------ GENERATE INVENTORY ------------------ */
+        stage('Generate Inventory') {
+            steps {
+                script {
+                    def master_ip  = sh(script: "cd terraform && terraform output -raw redis_master_private_ip", returnStdout: true).trim()
+                    def replica_ip = sh(script: "cd terraform && terraform output -raw redis_replica_private_ip", returnStdout: true).trim()
+                    def bastion_ip = sh(script: "cd terraform && terraform output -raw bastion_public_ip", returnStdout: true).trim()
+
+                    writeFile file: "ansible/inventory/hosts.ini", text: """
+[redis_master]
+${master_ip}
+
+[redis_replica]
+${replica_ip}
+
+[bastion]
+${bastion_ip}
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=../terraform/redis-demo-key.pem
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ../terraform/redis-demo-key.pem ubuntu@${bastion_ip}"'
+"""
+                }
+            }
+        }
+
+        /* ------------------ ANSIBLE INSTALL ------------------ */
+        stage('Install Redis via Ansible') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-galaxy install -r requirements.yml
+                    ansible-playbook site.yml -i inventory/hosts.ini \
+                      --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+                '''
+            }
+        }
+
+        /* ------------------ REDIS TEST ------------------ */
+        stage('Redis Test – Master & Replica') {
+            steps {
+                sh '''
+                cd terraform
+                MASTER=$(terraform output -raw redis_master_private_ip)
+                REPLICA=$(terraform output -raw redis_replica_private_ip)
+                BASTION=$(terraform output -raw bastion_public_ip)
+                cd ..
+
+                echo "TEST → Redis Master"
+                ssh -o StrictHostKeyChecking=no \
+                    -o UserKnownHostsFile=/dev/null \
+                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/redis-demo-key.pem ubuntu@$BASTION -W %h:%p" \
+                    -i terraform/redis-demo-key.pem \
+                    ubuntu@$MASTER "redis-cli ping"
+
+                echo "TEST → Redis Replica"
+                ssh -o StrictHostKeyChecking=no \
+                    -o UserKnownHostsFile=/dev/null \
+                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/redis-demo-key.pem ubuntu@$BASTION -W %h:%p" \
+                    -i terraform/redis-demo-key.pem \
+                    ubuntu@$REPLICA "redis-cli ping"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✔ Redis HA Deployment Successful!"
+        }
+        failure {
+            echo "❌ Pipeline FAILED! Check errors above."
+        }
+    }
+}
