@@ -44,7 +44,7 @@ variable "instance_type_valkey" {
 variable "s3_bucket_name" {
   description = "S3 bucket for demo (must be globally unique!)"
   type        = string
-  default     = "suraj-valkey-demo-bucket-19"
+  default     = "suraj-valkey-demo-bucket-1"
 }
 
 variable "key_name" {
