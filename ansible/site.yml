@@ -1,63 +1,78 @@
 ---
-# ===========================
-# Install & Configure Valkey Master
-# ===========================
-- name: Install Valkey Master
-  hosts: valkey_master
+# ==========================================
+# 1. COMMON: Add Repo & Install Valkey (All Nodes)
+# ==========================================
+- name: Install Valkey on All Nodes
+  hosts: all
   become: yes
   tasks:
-
-    - name: Install Valkey
+    - name: Install prerequisites
       apt:
-        name: valkey-server
+        name: software-properties-common
         state: present
         update_cache: yes
 
-    - name: Configure Valkey master bind
+    - name: Add Valkey Official PPA
+      apt_repository:
+        repo: "ppa:valkey-io/valkey"
+        state: present
+        update_cache: yes
+
+    - name: Install Valkey Server
+      apt:
+        name: valkey
+        state: present
+
+    - name: Stop Valkey before configuring
+      service:
+        name: valkey
+        state: stopped
+
+# ==========================================
+# 2. MASTER: Configure Specifics
+# ==========================================
+- name: Configure Valkey Master
+  hosts: valkey_master
+  become: yes
+  tasks:
+    - name: Configure Master Binding
       lineinfile:
         path: /etc/valkey/valkey.conf
         regexp: '^bind '
         line: "bind 0.0.0.0"
 
-    - name: Disable protected mode
+    - name: Disable Protected Mode
       lineinfile:
         path: /etc/valkey/valkey.conf
         regexp: '^protected-mode '
         line: "protected-mode no"
 
-    - name: Restart Valkey
+    - name: Start Valkey Master
       service:
-        name: valkey-server
+        name: valkey
         state: restarted
         enabled: yes
 
-
-# ===========================
-# Install & Configure Valkey Replica
-# ===========================
-- name: Install Valkey Replica
+# ==========================================
+# 3. REPLICA: Configure Specifics
+# ==========================================
+- name: Configure Valkey Replica
   hosts: valkey_replica
   become: yes
   vars:
-    valkey_master_ip: "{{ groups['valkey_master'][0] }}"
+    # Dynamically grab the Master IP from the inventory
+    master_ip: "{{ groups['valkey_master'][0] }}"
   tasks:
-
-    - name: Install Valkey
-      apt:
-        name: valkey-server
-        state: present
-        update_cache: yes
-
-    - name: Configure Valkey replica
+    - name: Configure Replica Settings
       blockinfile:
         path: /etc/valkey/valkey.conf
         block: |
-          replicaof {{ valkey_master_ip }} 6379
           bind 0.0.0.0
           protected-mode no
+          replicaof {{ master_ip }} 6379
 
-    - name: Restart Valkey
+    - name: Start Valkey Replica
       service:
-        name: valkey-server
+        name: valkey
         state: restarted
         enabled: yes
