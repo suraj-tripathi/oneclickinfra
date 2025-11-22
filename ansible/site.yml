@@ -36,10 +36,10 @@
 # Install & Configure Valkey Replica
 # ===========================
 - name: Install Valkey Replica
-  hosts: redis_replica
+  hosts: valkey_replica
   become: yes
   vars:
-    valkey_master_ip: "{{ groups['redis_master'][0] }}"
+    valkey_master_ip: "{{ groups['valkey_master'][0] }}"
   tasks:
 
     - name: Install Valkey
