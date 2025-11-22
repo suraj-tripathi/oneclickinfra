@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "owner" {
   description = "Owner tag"
   type        = string
-  default     = "aditya"
+  default     = "suraj"
 }
 
 variable "vpc_cidr" {
@@ -21,12 +21,12 @@ variable "bastion_subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
-variable "redis_master_subnet_cidr" {
+variable "valkey_master_subnet_cidr" {
   type        = string
   default     = "10.0.2.0/24"
 }
 
-variable "redis_replica_subnet_cidr" {
+variable "valkey_replica_subnet_cidr" {
   type        = string
   default     = "10.0.3.0/24"
 }
@@ -36,7 +36,7 @@ variable "instance_type_bastion" {
   default     = "t3.micro"
 }
 
-variable "instance_type_redis" {
+variable "instance_type_valkey" {
   type        = string
   default     = "t3.micro"
 }
@@ -44,11 +44,11 @@ variable "instance_type_redis" {
 variable "s3_bucket_name" {
   description = "S3 bucket for demo (must be globally unique!)"
   type        = string
-  default     = "suraj-redis-demo-bucket-19"
+  default     = "suraj-valkey-demo-bucket-19"
 }
 
 variable "key_name" {
   description = "Name for AWS key pair"
   type        = string
-  default     = "redis-demo-key"
+  default     = "valkey-demo-key"
 }
