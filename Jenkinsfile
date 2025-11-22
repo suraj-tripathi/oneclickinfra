@@ -63,7 +63,7 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
         }
 
         /* ------------------ ANSIBLE INSTALL ------------------ */
-        stage('Install Redis via Ansible') {
+        stage('Install Valkey via Ansible') {
             steps {
                 sh '''
                     cd ansible
@@ -75,7 +75,7 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
         }
 
         /* ------------------ VALKEY TEST ------------------ */
-        stage('Redis Test – Master & Replica') {
+        stage('Valkey Test – Master & Replica') {
             steps {
                 sh '''
                 cd terraform
