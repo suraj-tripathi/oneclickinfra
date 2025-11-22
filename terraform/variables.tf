@@ -44,7 +44,7 @@ variable "instance_type_redis" {
 variable "s3_bucket_name" {
   description = "S3 bucket for demo (must be globally unique!)"
   type        = string
-  default     = "aditya-redis-demo-bucket-18"
+  default     = "aditya-redis-demo-bucket-19"
 }
 
 variable "key_name" {
