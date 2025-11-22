@@ -8,7 +8,7 @@ filters:
   tag:Project:
     - valkey-ha-demo
 
-# group by the Role tag, so we get groups: bastion, redis-master, redis-replica
+# group by the Role tag, so we get groups: bastion, valkey-master, valkey-replica
 keyed_groups:
   - key: tags['Role']
     prefix: ""
