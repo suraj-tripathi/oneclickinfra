@@ -1,10 +1,10 @@
 ---
-- hosts: redis_master
+- hosts: valkey_master
   become: yes
   roles:
     - role: valkey
 
-- hosts: redis_replica
+- hosts: valkey_replica
   become: yes
   roles:
     - role: valkey
