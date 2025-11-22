@@ -62,25 +62,27 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             }
         }
 
-        /* ------------------ ANSIBLE INSTALL ------------------ */
+        /* ------------------ ANSIBLE INSTALL (User Scope Fix) ------------------ */
         stage('Install Valkey via Ansible') {
             steps {
                 sh '''
                     cd ansible
                     
-                    echo "--- Setting up Virtual Env for Ansible ---"
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install ansible
+                    echo "--- Installing Ansible to User Scope (Skipping Venv) ---"
+                    
+                    # 1. Add the local user binary folder to PATH
+                    export PATH=$PATH:$HOME/.local/bin
+                    
+                    # 2. Install Ansible directly for the 'jenkins' user
+                    # (If this fails, your server is missing python3-pip and requires Admin access)
+                    python3 -m pip install --user ansible
                     
                     echo "--- Running Playbook ---"
-                    # No need for ansible-galaxy anymore!
                     ansible-playbook site.yml -i inventory/hosts.ini \
                       --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
                 '''
             }
         }
-
         /* ------------------ VALKEY TEST ------------------ */
         stage('Valkey Test – Master & Replica') {
             steps {
