@@ -23,7 +23,7 @@ provider "aws" {
 
 locals {
   common_tags = {
-    Project = "redis-ha-demo"
+    Project = "valkey-ha-demo"
     Owner   = var.owner
   }
 }
@@ -34,25 +34,25 @@ resource "aws_s3_bucket" "redis_bucket" {
   force_destroy = true
 
   tags = merge(local.common_tags, {
-    Name = "redis-demo-bucket"
+    Name = "valkey-demo-bucket"
   })
 }
 
 # --- Key pair: create PEM locally + in AWS -----------------------------------
-resource "tls_private_key" "redis_key" {
+resource "tls_private_key" "valkey_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
-resource "local_file" "redis_private_key" {
+resource "local_file" "valkey_private_key" {
   filename        = "${path.module}/redis-demo-key.pem"
-  content         = tls_private_key.redis_key.private_key_pem
+  content         = tls_private_key.valkey_key.private_key_pem
   file_permission = "0600"
 }
 
 resource "aws_key_pair" "redis_key" {
   key_name   = var.key_name
-  public_key = tls_private_key.redis_key.public_key_openssh
+  public_key = tls_private_key.valkey_key.public_key_openssh
 
   tags = merge(local.common_tags, {
     Name = var.key_name
@@ -60,26 +60,26 @@ resource "aws_key_pair" "redis_key" {
 }
 
 # --- Networking: VPC, subnets, IGW, NAT, routes -----------------------------
-resource "aws_vpc" "redis_vpc" {
+resource "aws_vpc" "valkey_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = merge(local.common_tags, {
-    Name = "redis-vpc"
+    Name = "valkey-vpc"
   })
 }
 
 resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.redis_vpc.id
+  vpc_id = aws_vpc.valkey_vpc.id
 
   tags = merge(local.common_tags, {
-    Name = "redis-igw"
+    Name = "valkey-igw"
   })
 }
 
 resource "aws_subnet" "bastion" {
-  vpc_id                  = aws_vpc.redis_vpc.id
+  vpc_id                  = aws_vpc.valkey_vpc.id
   cidr_block              = var.bastion_subnet_cidr
   map_public_ip_on_launch = true
   availability_zone       = "${var.aws_region}a"
@@ -90,8 +90,8 @@ resource "aws_subnet" "bastion" {
 }
 
 resource "aws_subnet" "redis_master" {
-  vpc_id                  = aws_vpc.redis_vpc.id
-  cidr_block              = var.redis_master_subnet_cidr
+  vpc_id                  = aws_vpc.valkey_vpc.id
+  cidr_block              = var.valkey_master_subnet_cidr
   map_public_ip_on_launch = false
   availability_zone       = "${var.aws_region}a"
 
@@ -100,9 +100,9 @@ resource "aws_subnet" "redis_master" {
   })
 }
 
-resource "aws_subnet" "redis_replica" {
-  vpc_id                  = aws_vpc.redis_vpc.id
-  cidr_block              = var.redis_replica_subnet_cidr
+resource "aws_subnet" "valkey_replica" {
+  vpc_id                  = aws_vpc.valkey_vpc.id
+  cidr_block              = var.valkey_replica_subnet_cidr
   map_public_ip_on_launch = false
   availability_zone       = "${var.aws_region}a"
 
@@ -116,7 +116,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = merge(local.common_tags, {
-    Name = "redis-nat-eip"
+    Name = "valkey-nat-eip"
   })
 }
 
@@ -125,7 +125,7 @@ resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
 
   tags = merge(local.common_tags, {
-    Name = "redis-nat-gw"
+    Name = "valkey-nat-gw"
   })
 
   depends_on = [aws_internet_gateway.igw]
@@ -133,7 +133,7 @@ resource "aws_nat_gateway" "nat" {
 
 # Public route table (for bastion)
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.redis_vpc.id
+  vpc_id = aws_vpc.valkey_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -141,7 +141,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "redis-public-rt"
+    Name = "valkey-public-rt"
   })
 }
 
@@ -152,7 +152,7 @@ resource "aws_route_table_association" "public_bastion" {
 
 # Private route table (for master + replica, via NAT)
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.redis_vpc.id
+  vpc_id = aws_vpc.valkey_vpc.id
 
   route {
     cidr_block     = "0.0.0.0/0"
@@ -160,17 +160,17 @@ resource "aws_route_table" "private" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "redis-private-rt"
+    Name = "valkey-private-rt"
   })
 }
 
 resource "aws_route_table_association" "private_master" {
-  subnet_id      = aws_subnet.redis_master.id
+  subnet_id      = aws_subnet.valkey_master.id
   route_table_id = aws_route_table.private.id
 }
 
 resource "aws_route_table_association" "private_replica" {
-  subnet_id      = aws_subnet.redis_replica.id
+  subnet_id      = aws_subnet.valkey_replica.id
   route_table_id = aws_route_table.private.id
 }
 
@@ -179,7 +179,7 @@ resource "aws_route_table_association" "private_replica" {
 resource "aws_security_group" "bastion_sg" {
   name        = "bastion-sg"
   description = "Allow SSH from anywhere"
-  vpc_id      = aws_vpc.redis_vpc.id
+  vpc_id      = aws_vpc.valkey_vpc.id
 
   ingress {
     description = "SSH from internet"
@@ -202,10 +202,10 @@ resource "aws_security_group" "bastion_sg" {
 }
 
 # Redis SG: SSH only from bastion, Redis between redis nodes
-resource "aws_security_group" "redis_sg" {
+resource "aws_security_group" "valkey_sg" {
   name        = "db-sg"
-  description = "Redis SG for master and replica"
-  vpc_id      = aws_vpc.redis_vpc.id
+  description = "Valkey SG for master and replica"
+  vpc_id      = aws_vpc.valkey_vpc.id
 
   # SSH from bastion only
   ingress {
@@ -218,7 +218,7 @@ resource "aws_security_group" "redis_sg" {
 
   # Redis port between redis nodes (master <-> replica)
   ingress {
-    description = "Redis traffic within SG"
+    description = "Valkey traffic within SG"
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
@@ -254,13 +254,13 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# --- EC2 instances: bastion, redis master, redis replica ---------------------
+# --- EC2 instances: bastion, valkey master, valkey replica ---------------------
 resource "aws_instance" "bastion" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type_bastion
   subnet_id                   = aws_subnet.bastion.id
   associate_public_ip_address = true
-  key_name                    = aws_key_pair.redis_key.key_name
+  key_name                    = aws_key_pair.valkey_key.key_name
   vpc_security_group_ids      = [aws_security_group.bastion_sg.id]
 
   tags = merge(local.common_tags, {
@@ -269,30 +269,30 @@ resource "aws_instance" "bastion" {
   })
 }
 
-resource "aws_instance" "redis_master" {
+resource "aws_instance" "valkey_master" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type_redis
-  subnet_id              = aws_subnet.redis_master.id
+  subnet_id              = aws_subnet.valkey_master.id
   associate_public_ip_address = false
-  key_name               = aws_key_pair.redis_key.key_name
+  key_name               = aws_key_pair.valkey_key.key_name
   vpc_security_group_ids = [aws_security_group.redis_sg.id]
 
   tags = merge(local.common_tags, {
-    Name = "master-redis"
-    Role = "redis-master"
+    Name = "master-valkey"
+    Role = "valkey-master"
   })
 }
 
-resource "aws_instance" "redis_replica" {
+resource "aws_instance" "valkey_replica" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type_redis
-  subnet_id              = aws_subnet.redis_replica.id
+  subnet_id              = aws_subnet.valkey_replica.id
   associate_public_ip_address = false
-  key_name               = aws_key_pair.redis_key.key_name
+  key_name               = aws_key_pair.valkey_key.key_name
   vpc_security_group_ids = [aws_security_group.redis_sg.id]
 
   tags = merge(local.common_tags, {
-    Name = "replica-redis"
-    Role = "redis-replica"
+    Name = "replica-valkey"
+    Role = "valkey-replica"
   })
 }
