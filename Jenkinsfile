@@ -21,12 +21,12 @@ pipeline {
     stage('Terraform Apply') {
       steps {
         withCredentials([ usernamePassword(credentialsId: 'jenkinsdemo', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY') ]) {
-          sh '''
-            set -euo pipefail
-            cd terraform
-            terraform init -input=false
-            terraform apply -auto-approve
-          '''
+          sh '''#!/bin/bash
+set -euo pipefail
+cd terraform
+terraform init -input=false
+terraform apply -auto-approve
+'''
         }
       }
     }
@@ -59,38 +59,40 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
 
     stage('Prepare Python & Ansible') {
       steps {
-        sh '''
-          set -euo pipefail
-          if ! command -v python3 >/dev/null 2>&1; then
-            echo "ERROR: python3 not found on agent" >&2
-            exit 1
-          fi
+        sh '''#!/bin/bash
+set -euo pipefail
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 not found" >&2
+  exit 1
+fi
 
-          rm -rf .venv || true
-          if python3 -m venv .venv 2>/tmp/venv_err.log; then
-            echo "venv created"
-          else
-            if ! command -v pip3 >/dev/null 2>&1; then
-              echo "pip3 missing; cannot create venv" >&2
-              cat /tmp/venv_err.log || true
-              exit 1
-            fi
-            pip3 install --user virtualenv
-            export PATH="$HOME/.local/bin:$PATH"
-            python3 -m virtualenv .venv
-          fi
+rm -rf .venv || true
 
-          . .venv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          pip install ansible
-          ansible-galaxy --version || true
-          deactivate
-        '''
+if python3 -m venv .venv 2>/tmp/venv_err.log; then
+  echo "venv created"
+else
+  if ! command -v pip3 >/dev/null 2>&1; then
+    echo "pip3 missing; cannot fallback" >&2
+    cat /tmp/venv_err.log || true
+    exit 1
+  fi
+  pip3 install --user virtualenv
+  export PATH="$HOME/.local/bin:$PATH"
+  python3 -m virtualenv .venv
+fi
+
+. .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install ansible
+ansible-galaxy --version || true
+deactivate
+'''
       }
     }
 
     stage('Run Ansible Playbook') {
       steps {
-        sh '''
-          set -euo pipefail
-          . .venv/bin/activate
+        sh '''#!/bin/bash
+set -euo pipefail
+. .venv/bin/activate
+chmod 600 terra
