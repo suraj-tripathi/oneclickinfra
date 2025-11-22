@@ -6,7 +6,6 @@ pipeline {
   }
 
   options {
-    // fail fast and keep workspace between stages for venv usability
     ansiColor('xterm')
     timeout(time: 60, unit: 'MINUTES')
   }
@@ -35,5 +34,9 @@ pipeline {
     stage('Generate Inventory') {
       steps {
         script {
-          def master_ip  = sh(script: "cd terraform && terraform output -raw valkey_master_private_ip", returnStdout: true).trim()
-          def replica_ip = sh(script: "cd terraform &_
+          // Use single-line sh with returnStdout to avoid multiline parsing issues
+          def master_ip  = sh(returnStdout: true, script: 'cd terraform && terraform output -raw valkey_master_private_ip').trim()
+          def replica_ip = sh(returnStdout: true, script: 'cd terraform && terraform output -raw valkey_replica_private_ip').trim()
+          def bastion_ip = sh(returnStdout: true, script: 'cd terraform && terraform output -raw bastion_public_ip').trim()
+
+          writeFile
