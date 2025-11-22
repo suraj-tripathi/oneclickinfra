@@ -6,7 +6,7 @@ regions:
 
 filters:
   tag:Project:
-    - redis-ha-demo
+    - valkey-ha-demo
 
 # group by the Role tag, so we get groups: bastion, redis-master, redis-replica
 keyed_groups:
