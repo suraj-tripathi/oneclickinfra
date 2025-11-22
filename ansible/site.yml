@@ -1,29 +1,42 @@
 ---
 # ==========================================
-# 1. COMMON: Add Repo & Install Valkey (All Nodes)
+# 1. COMMON: Add Repo & Install Valkey (Percona Method)
 # ==========================================
 - name: Install Valkey on All Nodes
   hosts: all
   become: yes
   tasks:
-    - name: Install prerequisites
+    - name: Install System Dependencies
       apt:
-        name: software-properties-common
+        name:
+          - wget
+          - gnupg2
+          - lsb-release
+          - curl
         state: present
         update_cache: yes
 
-    - name: Add Valkey Official PPA
-      apt_repository:
-        repo: "ppa:valkey-io/valkey"
-        state: present
-        update_cache: yes
+    - name: Download Percona Repo Setup
+      get_url:
+        url: "https://repo.percona.com/apt/percona-release_latest.generic_all.deb"
+        dest: "/tmp/percona-release.deb"
+
+    - name: Install Percona Repo
+      apt:
+        deb: "/tmp/percona-release.deb"
+
+    - name: Enable Valkey Repository
+      shell: percona-release enable valkey experimental
+      args:
+        creates: /etc/apt/sources.list.d/percona-valkey.list
 
     - name: Install Valkey Server
       apt:
         name: valkey
         state: present
+        update_cache: yes
 
-    - name: Stop Valkey before configuring
+    - name: Stop Valkey (to apply config)
       service:
         name: valkey
         state: stopped
@@ -60,7 +73,6 @@
   hosts: valkey_replica
   become: yes
   vars:
-    # Dynamically grab the Master IP from the inventory
     master_ip: "{{ groups['valkey_master'][0] }}"
   tasks:
     - name: Configure Replica Settings
