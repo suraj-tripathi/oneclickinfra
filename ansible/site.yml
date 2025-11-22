@@ -1,63 +1,63 @@
 ---
 # ===========================
-# Install & Configure Redis Master
+# Install & Configure Valkey Master
 # ===========================
-- name: Install Redis Master
-  hosts: redis_master
+- name: Install Valkey Master
+  hosts: valkey_master
   become: yes
   tasks:
 
-    - name: Install Redis
+    - name: Install Valkey
       apt:
-        name: redis-server
+        name: valkey-server
         state: present
         update_cache: yes
 
-    - name: Configure Redis master
+    - name: Configure Valkey master bind
       lineinfile:
-        path: /etc/redis/redis.conf
+        path: /etc/valkey/valkey.conf
         regexp: '^bind '
         line: "bind 0.0.0.0"
 
     - name: Disable protected mode
       lineinfile:
-        path: /etc/redis/redis.conf
+        path: /etc/valkey/valkey.conf
         regexp: '^protected-mode '
         line: "protected-mode no"
 
-    - name: Restart Redis
+    - name: Restart Valkey
       service:
-        name: redis-server
+        name: valkey-server
         state: restarted
         enabled: yes
 
 
 # ===========================
-# Install & Configure Redis Replica
+# Install & Configure Valkey Replica
 # ===========================
-- name: Install Redis Replica
+- name: Install Valkey Replica
   hosts: redis_replica
   become: yes
   vars:
-    redis_master_ip: "{{ groups['redis_master'][0] }}"
+    valkey_master_ip: "{{ groups['redis_master'][0] }}"
   tasks:
 
-    - name: Install Redis
+    - name: Install Valkey
       apt:
-        name: redis-server
+        name: valkey-server
         state: present
         update_cache: yes
 
-    - name: Configure Redis replica
+    - name: Configure Valkey replica
       blockinfile:
-        path: /etc/redis/redis.conf
+        path: /etc/valkey/valkey.conf
         block: |
-          replicaof {{ redis_master_ip }} 6379
+          replicaof {{ valkey_master_ip }} 6379
           bind 0.0.0.0
           protected-mode no
 
-    - name: Restart Redis
+    - name: Restart Valkey
       service:
-        name: redis-server
+        name: valkey-server
         state: restarted
         enabled: yes
