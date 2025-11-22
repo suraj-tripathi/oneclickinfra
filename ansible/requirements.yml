@@ -1,6 +1,6 @@
 ---
 roles:
-  - name: ansible-role-valkey
+  - name: valkey
     src: https://github.com/mother-of-all-self-hosting/ansible-role-valkey.git
     scm: git
     version: main
