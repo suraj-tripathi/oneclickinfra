@@ -12,7 +12,7 @@ pipeline {
         stage('Checkout Repo') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/AdityaRajSingh18v/oneclickinfra2.git'
+                    url: 'https://github.com/suraj-tripathi/oneclickinfra.git'
             }
         }
 
