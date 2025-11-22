@@ -29,7 +29,7 @@ locals {
 }
 
 # --- S3 bucket (for demo / artifacts) ----------------------------------------
-resource "aws_s3_bucket" "redis_bucket" {
+resource "aws_s3_bucket" "valkey_bucket" {
   bucket        = var.s3_bucket_name
   force_destroy = true
 
@@ -45,12 +45,12 @@ resource "tls_private_key" "valkey_key" {
 }
 
 resource "local_file" "valkey_private_key" {
-  filename        = "${path.module}/redis-demo-key.pem"
+  filename        = "${path.module}/valkey-demo-key.pem"
   content         = tls_private_key.valkey_key.private_key_pem
   file_permission = "0600"
 }
 
-resource "aws_key_pair" "redis_key" {
+resource "aws_key_pair" "valkey_key" {
   key_name   = var.key_name
   public_key = tls_private_key.valkey_key.public_key_openssh
 
@@ -89,7 +89,7 @@ resource "aws_subnet" "bastion" {
   })
 }
 
-resource "aws_subnet" "redis_master" {
+resource "aws_subnet" "valkey_master" {
   vpc_id                  = aws_vpc.valkey_vpc.id
   cidr_block              = var.valkey_master_subnet_cidr
   map_public_ip_on_launch = false
@@ -201,7 +201,7 @@ resource "aws_security_group" "bastion_sg" {
   })
 }
 
-# Redis SG: SSH only from bastion, Redis between redis nodes
+# Valkey SG: SSH only from bastion, Valkey between valkey nodes
 resource "aws_security_group" "valkey_sg" {
   name        = "db-sg"
   description = "Valkey SG for master and replica"
@@ -271,11 +271,11 @@ resource "aws_instance" "bastion" {
 
 resource "aws_instance" "valkey_master" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type_redis
+  instance_type          = var.instance_type_valkey
   subnet_id              = aws_subnet.valkey_master.id
   associate_public_ip_address = false
   key_name               = aws_key_pair.valkey_key.key_name
-  vpc_security_group_ids = [aws_security_group.redis_sg.id]
+  vpc_security_group_ids = [aws_security_group.valkey_sg.id]
 
   tags = merge(local.common_tags, {
     Name = "master-valkey"
@@ -285,11 +285,11 @@ resource "aws_instance" "valkey_master" {
 
 resource "aws_instance" "valkey_replica" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type_redis
+  instance_type          = var.instance_type_valkey
   subnet_id              = aws_subnet.valkey_replica.id
   associate_public_ip_address = false
   key_name               = aws_key_pair.valkey_key.key_name
-  vpc_security_group_ids = [aws_security_group.redis_sg.id]
+  vpc_security_group_ids = [aws_security_group.valkey_sg.id]
 
   tags = merge(local.common_tags, {
     Name = "replica-valkey"
