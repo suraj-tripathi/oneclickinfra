@@ -2,9 +2,9 @@
 - hosts: redis_master
   become: yes
   roles:
-    - geerlingguy.redis
+    - role: valkey
 
 - hosts: redis_replica
   become: yes
   roles:
-    - geerlingguy.redis
+    - role: valkey
