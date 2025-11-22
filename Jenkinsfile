@@ -74,33 +74,31 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             }
         }
 
-        /* ------------------ VALKEY TEST ------------------ */
-        stage('Valkey Test – Master & Replica') {
-            steps {
-                sh '''
-                cd terraform
-                MASTER=$(terraform output -raw valkey_master_private_ip)
-                REPLICA=$(terraform output -raw valkey_replica_private_ip)
-                BASTION=$(terraform output -raw bastion_public_ip)
-                cd ..
+       stage('Prepare Ansible (venv)') {
+  steps {
+    sh '''
+      python3 -m venv .venv
+      . .venv/bin/activate
+      pip install --upgrade pip setuptools wheel
+      pip install ansible
+      ansible-galaxy --version
+    '''
+  }
+}
 
-                echo "TEST → Valkey Master"
-                ssh -o StrictHostKeyChecking=no \
-                    -o UserKnownHostsFile=/dev/null \
-                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-                    -i terraform/valkey-demo-key.pem \
-                    ubuntu@$MASTER "valkey-cli ping"
+stage('Install Valkey via Ansible (venv)') {
+  steps {
+    sh '''
+      . .venv/bin/activate
+      chmod 600 terraform/valkey-demo-key.pem || true
+      cd ansible
+      ansible-galaxy install -r requirements.yml
+      ansible-playbook site.yml -i inventory/hosts.ini \
+        --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    '''
+  }
+}
 
-                echo "TEST → Valkey Replica"
-                ssh -o StrictHostKeyChecking=no \
-                    -o UserKnownHostsFile=/dev/null \
-                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-                    -i terraform/valkey-demo-key.pem \
-                    ubuntu@$REPLICA "valkey-cli ping"
-                '''
-            }
-        }
-    }
 
     post {
         success {
