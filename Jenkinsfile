@@ -62,22 +62,28 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             }
         }
 
-        /* ------------------ ANSIBLE INSTALL (User Scope Fix) ------------------ */
+        /* ------------------ ANSIBLE INSTALL (Bootstrap PIP) ------------------ */
         stage('Install Valkey via Ansible') {
             steps {
                 sh '''
                     cd ansible
                     
-                    echo "--- Installing Ansible to User Scope (Skipping Venv) ---"
+                    echo "--- Bootstrapping PIP (Installing missing dependency) ---"
+                    # 1. Download the official PIP installer script
+                    curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
                     
-                    # 1. Add the local user binary folder to PATH
+                    # 2. Install PIP to the local user (no sudo needed)
+                    python3 get-pip.py --user
+                    
+                    echo "--- Installing Ansible ---"
+                    # 3. Ensure the local bin is in PATH so we can find 'ansible-playbook' later
                     export PATH=$PATH:$HOME/.local/bin
                     
-                    # 2. Install Ansible directly for the 'jenkins' user
-                    # (If this fails, your server is missing python3-pip and requires Admin access)
+                    # 4. Now install Ansible using the newly installed pip
                     python3 -m pip install --user ansible
                     
                     echo "--- Running Playbook ---"
+                    # 5. Run the playbook
                     ansible-playbook site.yml -i inventory/hosts.ini \
                       --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
                 '''
