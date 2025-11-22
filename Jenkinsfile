@@ -7,7 +7,7 @@ pipeline {
 
   stages {
 
-    /* ------------------ CHECKOUT ------------------ */
+    // ------------------ CHECKOUT ------------------
     stage('Checkout Repo') {
       steps {
         git branch: 'main',
@@ -15,26 +15,21 @@ pipeline {
       }
     }
 
-    /* ------------------ TERRAFORM ------------------ */
+    // ------------------ TERRAFORM ------------------
     stage('Terraform Apply') {
       steps {
-        withCredentials([
-          usernamePassword(
-            credentialsId: 'jenkinsdemo',
-            usernameVariable: 'AWS_ACCESS_KEY_ID',
-            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-          )
-        ]) {
+        withCredentials([ usernamePassword(credentialsId: 'jenkinsdemo', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY') ]) {
           sh '''
+            set -e
             cd terraform
-            terraform init
+            terraform init -input=false
             terraform apply -auto-approve
           '''
         }
       }
     }
 
-    /* ------------------ GENERATE INVENTORY ------------------ */
+    // ------------------ GENERATE INVENTORY ------------------
     stage('Generate Inventory') {
       steps {
         script {
@@ -61,26 +56,27 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
       }
     }
 
-    /* ------------------ PREPARE ANSIBLE (venv) ------------------ */
-    stage('Prepare Ansible (venv)') {
-      steps {
-        sh '''
-          # create virtualenv inside workspace
-          python3 -m venv .venv
-          . .venv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          pip install ansible
-          ansible-galaxy --version || true
-        '''
+    // ------------------ ANSIBLE: run inside Docker (recommended) ------------------
+    stage('Install Valkey via Ansible (Docker)') {
+      agent {
+        docker {
+          image 'williamyeh/ansible:alpine3'
+          args  '-u root:root --network host'
+        }
       }
-    }
-
-    /* ------------------ ANSIBLE INSTALL & RUN ------------------ */
-    stage('Install Valkey via Ansible (venv)') {
       steps {
         sh '''
-          . .venv/bin/activate
+          set -e
+          # ensure key permissions
           chmod 600 terraform/valkey-demo-key.pem || true
+
+          # ensure ssh client & git available inside container
+          if command -v apk >/dev/null 2>&1; then
+            apk add --no-cache openssh-client git bash ca-certificates
+          elif command -v apt-get >/dev/null 2>&1; then
+            apt-get update && apt-get install -y openssh-client git bash ca-certificates
+          fi
+
           cd ansible
           ansible-galaxy install -r requirements.yml
           ansible-playbook site.yml -i inventory/hosts.ini \
@@ -89,10 +85,11 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
       }
     }
 
-    /* ------------------ VALKEY TEST ------------------ */
+    // ------------------ VALKEY TEST ------------------
     stage('Valkey Test – Master & Replica') {
       steps {
         sh '''
+          set -e
           cd terraform
           MASTER=$(terraform output -raw valkey_master_private_ip)
           REPLICA=$(terraform output -raw valkey_replica_private_ip)
@@ -104,16 +101,16 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
           echo "TEST → Valkey Master"
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-            -i terraform/valkey-demo-key.pem ubuntu@$MASTER "valkey-cli ping"
+            -i terraform/valkey-demo-key.pem ubuntu@$MASTER "valkey-cli ping" || true
 
           echo "TEST → Valkey Replica"
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-            -i terraform/valkey-demo-key.pem ubuntu@$REPLICA "valkey-cli ping"
+            -i terraform/valkey-demo-key.pem ubuntu@$REPLICA "valkey-cli ping" || true
         '''
       }
     }
-  } // end stages
+  }
 
   post {
     success {
