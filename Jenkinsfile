@@ -39,15 +39,15 @@ pipeline {
         stage('Generate Inventory') {
             steps {
                 script {
-                    def master_ip  = sh(script: "cd terraform && terraform output -raw redis_master_private_ip", returnStdout: true).trim()
-                    def replica_ip = sh(script: "cd terraform && terraform output -raw redis_replica_private_ip", returnStdout: true).trim()
+                    def master_ip  = sh(script: "cd terraform && terraform output -raw valkey_master_private_ip", returnStdout: true).trim()
+                    def replica_ip = sh(script: "cd terraform && terraform output -raw valkey_replica_private_ip", returnStdout: true).trim()
                     def bastion_ip = sh(script: "cd terraform && terraform output -raw bastion_public_ip", returnStdout: true).trim()
 
                     writeFile file: "ansible/inventory/hosts.ini", text: """
-[redis_master]
+[valkey_master]
 ${master_ip}
 
-[redis_replica]
+[valkey_replica]
 ${replica_ip}
 
 [bastion]
@@ -55,8 +55,8 @@ ${bastion_ip}
 
 [all:vars]
 ansible_user=ubuntu
-ansible_ssh_private_key_file=../terraform/redis-demo-key.pem
-ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ../terraform/redis-demo-key.pem ubuntu@${bastion_ip}"'
+ansible_ssh_private_key_file=../terraform/valkey-demo-key.pem
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ../terraform/valkey-demo-key.pem ubuntu@${bastion_ip}"'
 """
                 }
             }
@@ -74,29 +74,29 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             }
         }
 
-        /* ------------------ REDIS TEST ------------------ */
+        /* ------------------ VALKEY TEST ------------------ */
         stage('Redis Test – Master & Replica') {
             steps {
                 sh '''
                 cd terraform
-                MASTER=$(terraform output -raw redis_master_private_ip)
-                REPLICA=$(terraform output -raw redis_replica_private_ip)
+                MASTER=$(terraform output -raw valkey_master_private_ip)
+                REPLICA=$(terraform output -raw valkey_replica_private_ip)
                 BASTION=$(terraform output -raw bastion_public_ip)
                 cd ..
 
-                echo "TEST → Redis Master"
+                echo "TEST → Valkey Master"
                 ssh -o StrictHostKeyChecking=no \
                     -o UserKnownHostsFile=/dev/null \
-                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/redis-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-                    -i terraform/redis-demo-key.pem \
-                    ubuntu@$MASTER "redis-cli ping"
+                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
+                    -i terraform/valkey-demo-key.pem \
+                    ubuntu@$MASTER "valkey-cli ping"
 
-                echo "TEST → Redis Replica"
+                echo "TEST → Valkey Replica"
                 ssh -o StrictHostKeyChecking=no \
                     -o UserKnownHostsFile=/dev/null \
-                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/redis-demo-key.pem ubuntu@$BASTION -W %h:%p" \
-                    -i terraform/redis-demo-key.pem \
-                    ubuntu@$REPLICA "redis-cli ping"
+                    -o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i terraform/valkey-demo-key.pem ubuntu@$BASTION -W %h:%p" \
+                    -i terraform/valkey-demo-key.pem \
+                    ubuntu@$REPLICA "valkey-cli ping"
                 '''
             }
         }
@@ -104,7 +104,7 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
 
     post {
         success {
-            echo "✔ Redis HA Deployment Successful!"
+            echo "✔ Valkey HA Deployment Successful!"
         }
         failure {
             echo "❌ Pipeline FAILED! Check errors above."
