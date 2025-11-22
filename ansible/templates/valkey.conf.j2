@@ -10,7 +10,7 @@ daemonize no
 supervised systemd
 
 loglevel notice
-logfile /var/log/redis/redis-server.log
+logfile /var/log/valkey/valkey-server.log
 
 databases 16
 
@@ -23,7 +23,7 @@ stop-writes-on-bgsave-error yes
 rdbcompression yes
 rdbchecksum yes
 dbfilename dump.rdb
-dir /var/lib/redis
+dir /var/lib/valkey
 
 appendonly yes
 appendfsync everysec
