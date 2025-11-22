@@ -67,7 +67,14 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             steps {
                 sh '''
                     cd ansible
-                    ansible-galaxy install -r requirements.yml
+                    
+                    echo "--- Setting up Virtual Env for Ansible ---"
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install ansible
+                    
+                    echo "--- Running Playbook ---"
+                    # No need for ansible-galaxy anymore!
                     ansible-playbook site.yml -i inventory/hosts.ini \
                       --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
                 '''
