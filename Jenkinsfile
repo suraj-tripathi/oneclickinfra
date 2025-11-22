@@ -53,7 +53,7 @@ ${replica_ip}
 [bastion]
 ${bastion_ip}
 
-[all:vars]
+[all: vars]
 ansible_user=ubuntu
 ansible_ssh_private_key_file=../terraform/valkey-demo-key.pem
 ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ../terraform/valkey-demo-key.pem ubuntu@${bastion_ip}"'
