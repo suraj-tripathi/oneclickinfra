@@ -62,28 +62,25 @@ ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -o StrictHostKeyChecking=
             }
         }
 
-        /* ------------------ ANSIBLE INSTALL (Bootstrap PIP) ------------------ */
+        /* ------------------ ANSIBLE INSTALL (Final Fix) ------------------ */
         stage('Install Valkey via Ansible') {
             steps {
                 sh '''
                     cd ansible
                     
-                    echo "--- Bootstrapping PIP (Installing missing dependency) ---"
-                    # 1. Download the official PIP installer script
+                    echo "--- Bootstrapping PIP (Bypassing PEP 668) ---"
                     curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
                     
-                    # 2. Install PIP to the local user (no sudo needed)
-                    python3 get-pip.py --user
+                    # FIX: Add --break-system-packages to force installation
+                    python3 get-pip.py --user --break-system-packages
                     
                     echo "--- Installing Ansible ---"
-                    # 3. Ensure the local bin is in PATH so we can find 'ansible-playbook' later
                     export PATH=$PATH:$HOME/.local/bin
                     
-                    # 4. Now install Ansible using the newly installed pip
-                    python3 -m pip install --user ansible
+                    # FIX: Add --break-system-packages to force Ansible install
+                    python3 -m pip install --user ansible --break-system-packages
                     
                     echo "--- Running Playbook ---"
-                    # 5. Run the playbook
                     ansible-playbook site.yml -i inventory/hosts.ini \
                       --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
                 '''
