@@ -216,7 +216,7 @@ resource "aws_security_group" "valkey_sg" {
     security_groups  = [aws_security_group.bastion_sg.id]
   }
 
-  # Redis port between redis nodes (master <-> replica)
+  # Valkey port between valkey nodes (master <-> replica)
   ingress {
     description = "Valkey traffic within SG"
     from_port   = 6379
