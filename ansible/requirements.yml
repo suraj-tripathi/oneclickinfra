@@ -1,6 +1,9 @@
 ---
 roles:
-  - src: geerlingguy.redis   # Redis installation role from Galaxy
+  - name: ansible-role-valkey
+    src: https://github.com/mother-of-all-self-hosting/ansible-role-valkey.git
+    scm: git
+
 collections:
   - name: amazon.aws
   - name: community.general
