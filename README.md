@@ -3,7 +3,7 @@
 
 **Terraform + Ansible + Jenkins CI/CD**
 
-This project provisions a fully automated **Redis High Availability setup** using:
+This project provisions a fully automated **Valkey High Availability setup** using:
 
 * **Terraform** – AWS VPC, Subnets, EC2, Security Groups, Bastion
 * **Ansible** – Configure Redis Master & Replica
@@ -16,18 +16,19 @@ This project provisions a fully automated **Redis High Availability setup** usin
 > **📌 Infrastructure Diagram**
 
 
-<img width="658" height="720" alt="image" src="https://github.com/user-attachments/assets/3c31a08b-a9a9-4cdb-9759-9078a270ae55" />
+![WhatsApp Image 2025-11-23 at 12 53 10](https://github.com/user-attachments/assets/38d2814f-03cb-45cc-a213-1e16cad2c6d5)
+
 
 ---
 
 # 📌 Project Features
 
-✔ Fully automated Redis HA deployment
+✔ Fully automated Valkey HA deployment
 ✔ Bastion-based secure SSH tunneling
-✔ Private Redis Master + Replica
+✔ Private Valkey Master + Replica
 ✔ Automatic replication configuration
 ✔ Jenkins-based CI/CD pipeline
-✔ Built-in Redis PING health check
+✔ Built-in Valkey PING health check
 
 ---
 
@@ -48,13 +49,13 @@ This project provisions a fully automated **Redis High Availability setup** usin
        │                     AWS VPC                      │
        │                                                  │
        │  ┌──────────────┐          ┌──────────────────┐  │
-       │  │   Bastion     │  SSH     │ Redis Master     │  │
+       │  │   Bastion     │  SSH     │ Valkey Master     │  │
        │  │ 13.135.72.10  ├─────────▶│ 10.0.2.210       │  │
        │  └──────────────┘          └──────────────────┘  │
        │           │                          ▲           │
        │           ▼                          │           │
        │  ┌──────────────────┐                │           │
-       │  │ Redis Replica     │◀──────────────┘           │
+       │  │ Valkey Replica     │◀──────────────┘           │
        │  │ 10.0.3.150        │                            │
        │  └──────────────────┘                            │
        └──────────────────────────────────────────────────┘
@@ -65,13 +66,13 @@ This project provisions a fully automated **Redis High Availability setup** usin
 # 📂 Project Structure
 
 ```
-redis-ha-infra/
+valkey-ha-infra/
 │
 ├── terraform/
 │   ├── main.tf
 │   ├── variables.tf
 │   ├── outputs.tf
-│   └── redis-demo-key.pem
+│   └── valkey-demo-key.pem
 │
 ├── ansible/
 │   ├── inventory/
@@ -79,7 +80,7 @@ redis-ha-infra/
 │   ├── site.yml
 │   ├── ansible.cfg
 │   └── templates/
-│       └── redis.conf.j2
+│       └── valkey.conf.j2
 │
 ├── Jenkinsfile
 └── README.md
@@ -103,21 +104,21 @@ Clones GitHub repository.
 
 Creates inventory dynamically using Terraform outputs.
 
-### **Stage 4: Install Redis via Ansible**
+### **Stage 4: Install Valkey via Ansible**
 
 Sets up:
 
-* Redis Master
-* Redis Replica
+* Valkey Master
+* Valkey Replica
 * Replication configuration
 * Protected-mode disabled
 
-### **Stage 5: Redis Testing**
+### **Stage 5: Valkey Testing**
 
 Jenkins performs:
 
 ```
-redis-cli ping
+valkey-cli ping
 ```
 
 On both Master & Replica via Bastion using ProxyCommand.
@@ -126,11 +127,11 @@ On both Master & Replica via Bastion using ProxyCommand.
 
 # 🧪 Manual Verification (Real Commands)
 
-## 1️⃣ SSH into Redis Master (via Bastion)
+## 1️⃣ SSH into Valkey Master (via Bastion)
 
 ```
-ssh -i terraform/redis-demo-key.pem \
-    -o ProxyCommand='ssh -i terraform/redis-demo-key.pem ubuntu@13.135.72.10 -W %h:%p' \
+ssh -i terraform/valkey-demo-key.pem \
+    -o ProxyCommand='ssh -i terraform/valkey-demo-key.pem ubuntu@13.135.72.10 -W %h:%p' \
     ubuntu@10.0.2.210
 ```
 
@@ -142,20 +143,20 @@ ubuntu@ip-10-0-2-210:~$
 
 ---
 
-## 2️⃣ SSH into Redis Replica (via Bastion)
+## 2️⃣ SSH into Valkey Replica (via Bastion)
 
 ```
-ssh -i terraform/redis-demo-key.pem \
-    -o ProxyCommand='ssh -i terraform/redis-demo-key.pem ubuntu@13.135.72.10 -W %h:%p' \
+ssh -i terraform/valkey-demo-key.pem \
+    -o ProxyCommand='ssh -i terraform/valkey-demo-key.pem ubuntu@13.135.72.10 -W %h:%p' \
     ubuntu@10.0.3.150
 ```
 
 ---
 
-## 3️⃣ Check Redis Master Status
+## 3️⃣ Check Valkey Master Status
 
 ```
-redis-cli ping
+valkey-cli ping
 ```
 
 Expected:
@@ -169,7 +170,7 @@ PONG
 ## 4️⃣ Replication Status from Master
 
 ```
-redis-cli info replication
+valkey-cli info replication
 ```
 
 Expected:
@@ -185,7 +186,7 @@ slave0:ip=10.0.3.150,state=online
 ## 5️⃣ Replica Sync Status
 
 ```
-redis-cli info replication
+valkey-cli info replication
 ```
 
 Expected:
@@ -203,13 +204,13 @@ master_link_status:up
 ### On Master:
 
 ```
-redis-cli set demo:test "hello-replica"
+valkey-cli set demo:test "hello-replica"
 ```
 
 ### On Replica:
 
 ```
-redis-cli get demo:test
+valkey-cli get demo:test
 ```
 
 Expected:
@@ -222,7 +223,7 @@ Expected:
 
 # 🎉 Final Notes
 
-✔ Full Redis HA setup automated
+✔ Full Valkey HA setup automated
 ✔ No manual infra creation
 ✔ Robust Jenkins CI/CD
 ✔ Verified Master–Replica replication
