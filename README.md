@@ -1,12 +1,12 @@
 
-# 🚀 Redis High Availability (HA) Infrastructure – Automated Deployment
+# 🚀 Valkey High Availability (HA) Infrastructure – Automated Deployment
 
 **Terraform + Ansible + Jenkins CI/CD**
 
 This project provisions a fully automated **Valkey High Availability setup** using:
 
 * **Terraform** – AWS VPC, Subnets, EC2, Security Groups, Bastion
-* **Ansible** – Configure Redis Master & Replica
+* **Ansible** – Configure Valkey Master & Replica
 * **Jenkins Pipeline** – End-to-end CI/CD deployment & testing
 
 ---
